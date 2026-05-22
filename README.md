@@ -102,7 +102,7 @@ If you want to view, edit, or run the raw Python code, ensure you have Python (v
 
 1. **Clone and navigate to the project directory:**
    ```bash
-   git clone [https://github.com/amrrnagy/Quoridor_AI.git](https://github.com/amrrnagy/Quoridor_AI.git)
+   git clone [https://github.com/amrrnagy/Quoridor_AI.git]
    cd Quoridor_AI
    ```
 
