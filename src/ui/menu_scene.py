@@ -1,6 +1,5 @@
-"""
-src/ui/menu_scene.py  —  Grandmaster Edition
-"""
+# src/ui/menu_scene.py
+
 from __future__ import annotations
 import math
 import random
@@ -10,29 +9,28 @@ import pygame
 from src.ui.scene_manager import Scene, SceneManager
 from src.ui.game_config import GameConfig, GameMode, Difficulty
 
-# ── colour palette ──
-BG_MAIN    = (18,  17,  26)
-BG_PANEL   = (14,  13,  24)
-BG_CARD    = (30,  27,  46)
-BG_CARD_A  = (45,  40,  72)
-PURPLE     = (127, 119, 221)
-PURPLE_DK  = ( 83,  74, 183)
-TEAL       = ( 29, 158, 117)
-AMBER      = (239, 159,  39)
-TEXT_PRI   = (240, 237, 248)
-TEXT_SEC   = (122, 117, 144)
-TEXT_DIM   = ( 90,  86, 112)
-BORDER     = ( 58,  53,  85)
-BORDER_A   = (127, 119, 221)
+BG_MAIN    = ( 98,  43,  20)  # Dark Earth Brown
+BG_PANEL   = (156, 102,  51)  # Tawny/Warm Brown
+BG_CARD    = (135,  85,  38)  # Mid-Tone Tawny
+BG_CARD_A  = (234, 222, 191)  # Pale Cream / Bone
+PURPLE     = (234, 222, 191)  # Start Button
+PURPLE_DK  = (156, 102,  51)  # Start Button Darker
+TEAL       = (137, 131, 104)  # Opponent active background (Olive Green)
+AMBER      = (255, 255, 255)  # Walls
+TEXT_PRI   = (234, 222, 191)  # Main Titles (Cream)
+TEXT_SEC   = (137, 131, 104)  # Sub-Labels (Olive Green)
+TEXT_DIM   = ( 98,  43,  20)  # Dark Brown (on Cream backgrounds)
+BORDER     = (137, 131, 104)  # Olive Green Borders
+BORDER_A   = (234, 222, 191)  # Cream Active Borders
 
 class _AmbientParticle:
     def __init__(self, w, h):
         self.x = random.randint(0, w)
         self.y = random.randint(0, h)
-        self.vx = random.uniform(-10, 10)
-        self.vy = random.uniform(-15, -5)
-        self.size = random.randint(2, 5)
-        self.max_life = random.uniform(3, 7)
+        self.vx = random.uniform(-5, 5)
+        self.vy = random.uniform(-10, -3)
+        self.size = random.randint(3, 6)
+        self.max_life = random.uniform(5, 10)
         self.life = self.max_life
 
     def update(self, dt_s, w, h):
@@ -45,11 +43,10 @@ class _AmbientParticle:
             self.life = self.max_life
 
     def draw(self, screen):
-        alpha = int(80 * (self.life / self.max_life))
+        alpha = int(70 * (self.life / self.max_life))
         s = pygame.Surface((self.size*2, self.size*2), pygame.SRCALPHA)
-        pygame.draw.circle(s, (*PURPLE, alpha), (self.size, self.size), self.size)
+        pygame.draw.circle(s, (*BG_PANEL, alpha), (self.size, self.size), self.size)
         screen.blit(s, (self.x, self.y))
-
 
 class _TextBox:
     """Interactive text input box for player names."""
@@ -72,14 +69,15 @@ class _TextBox:
     def draw(self, screen, font):
         bg = BG_CARD_A if self.active else BG_CARD
         brd = BORDER_A if self.active else BORDER
-        pygame.draw.rect(screen, bg, self.rect, border_radius=8)
-        pygame.draw.rect(screen, brd, self.rect, width=1, border_radius=8)
+        txt_col = TEXT_DIM if self.active else TEXT_PRI
+
+        pygame.draw.rect(screen, bg, self.rect, border_radius=12)
+        pygame.draw.rect(screen, brd, self.rect, width=2, border_radius=12)
 
         # Blinking cursor effect
         cursor = "|" if self.active and int(_time.time() * 2) % 2 == 0 else ""
-        txt_surf = font.render(self.text + cursor, True, TEXT_PRI)
+        txt_surf = font.render(self.text + cursor, True, txt_col)
         screen.blit(txt_surf, (self.rect.x + 16, self.rect.centery - txt_surf.get_height() // 2))
-
 
 class MenuScene(Scene):
     W, H = 1000, 750
@@ -89,34 +87,41 @@ class MenuScene(Scene):
         self.config = GameConfig()
 
         pygame.font.init()
-        self._font_title = pygame.font.SysFont("segoeui", 64, bold=True)
-        self._font_sub   = pygame.font.SysFont("segoeui", 18)
-        self._font_btn   = pygame.font.SysFont("segoeui", 20)
-        self._font_sect  = pygame.font.SysFont("segoeui", 13, bold=True)
+        self._font_title = pygame.font.SysFont("segoeui", 72, bold=True)
+        self._font_sub   = pygame.font.SysFont("segoeui", 22)
+        self._font_btn   = pygame.font.SysFont("segoeui", 22, bold=True)
+        self._font_sect  = pygame.font.SysFont("segoeui", 16, bold=True)
+        self._font_btn_dk = pygame.font.SysFont("segoeui", 22, bold=True)
 
         self._anim_t = 0.0
-        self._particles = [_AmbientParticle(self.W, self.H) for _ in range(40)]
+        self._particles = [_AmbientParticle(self.W, self.H) for _ in range(60)]
 
-        # Interactive Text Boxes (This was missing!)
-        self._tb_p1 = _TextBox(pygame.Rect(60, 445, 200, 44), "You")
-        self._tb_p2 = _TextBox(pygame.Rect(280, 445, 200, 44), "Player 2")
+        left_w = 550
+        lx = (left_w - 440) // 2 + 30
+        
+        # FIX: Position Player 2 textbox dynamically just like Player 1
+        self._tb_p1 = _TextBox(pygame.Rect(lx, 470, 440, 56), "You")
+        self._tb_p2 = _TextBox(pygame.Rect(lx, 570, 440, 56), "Player 2")
 
-        self._init_buttons()
+        self._init_buttons(left_w, lx)
 
-    def _init_buttons(self) -> None:
-        self._rect_hvh = pygame.Rect(60, 250, 440, 64)
-        self._rect_hvc = pygame.Rect(60, 326, 440, 64)
-        self._rect_start = pygame.Rect(60, 620, 440, 60)
-
-        # Difficulty chips
+    def _init_buttons(self, left_w, lx) -> None:
+        self._rect_hvh = pygame.Rect(lx, 290, 440, 64)
+        self._rect_hvc = pygame.Rect(lx, 366, 440, 64)
+        self._rect_start = pygame.Rect(lx, 660, 440, 60) 
         self._chip_rects = []
         for i in range(3):
-            self._chip_rects.append(pygame.Rect(60 + i*146, 545, 136, 44))
+            width = 136
+            if i == 1: width = 144 
+            x_pos = lx + i*146
+            self._chip_rects.append(pygame.Rect(x_pos, 570, width, 48))
 
     def handle_event(self, event: pygame.event.Event) -> None:
-        # Route events to the text boxes so you can type
+        # Route events to the correct text boxes
         self._tb_p1.handle_event(event)
-        self._tb_p2.handle_event(event)
+        
+        if self.config.mode == GameMode.HUMAN_VS_HUMAN:
+            self._tb_p2.handle_event(event)
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self._rect_hvh.collidepoint(event.pos):
@@ -130,9 +135,15 @@ class MenuScene(Scene):
                         self.config.difficulty = list(Difficulty)[i]
 
             if self._rect_start.collidepoint(event.pos):
-                # Save the names into the config before leaving
-                self.config.p1_name = self._tb_p1.text.strip() or "You"
-                self.config.p2_name = self._tb_p2.text.strip() or "Player 2"
+                # FIX: Save the correct names based on game mode
+                self.config.p1_name = self._tb_p1.text.strip() or "Player 1"
+                
+                if self.config.mode == GameMode.HUMAN_VS_AI:
+                    ai_names = ["Ashraf", "Yahia", "Amr"]
+                    # difficulty.value is 1, 2, or 3. List index is 0, 1, or 2.
+                    self.config.p2_name = ai_names[self.config.difficulty.value - 1]
+                else:
+                    self.config.p2_name = self._tb_p2.text.strip() or "Player 2"
 
                 from src.ui.game_scene import GameScene
                 self.manager.switch(GameScene(self.manager, self.config))
@@ -148,117 +159,116 @@ class MenuScene(Scene):
         for p in self._particles:
             p.draw(screen)
 
-        # ── Right Panel ──
-        right_w = 400
-        right_x = self.W - right_w
-        pygame.draw.rect(screen, BG_PANEL, (right_x, 0, right_w, self.H))
-        pygame.draw.line(screen, BORDER, (right_x, 0), (right_x, self.H))
-        self._draw_board_preview(screen, right_x + (right_w // 2), self.H // 2)
+        left_w = 550
+        cx = left_w // 2
+        lx = (left_w - 440) // 2 + 30
 
-        # ── Left Content ──
         title = self._font_title.render("QUORIDOR", True, TEXT_PRI)
-        screen.blit(title, (60, 80))
-        sub = self._font_sub.render("CSE472s · AI Project", True, TEXT_DIM)
-        screen.blit(sub, (64, 160))
+        screen.blit(title, title.get_rect(centerx=cx, top=100))
+      #  sub = self._font_sub.render("CSE472s · AI Project", True, TEXT_SEC)
+       # screen.blit(sub, sub.get_rect(centerx=cx, top=180))
 
         # ── Mode Selection ──
-        self._draw_sect_label(screen, "GAME MODE", 60, 225)
+        self._draw_sect_label(screen, "GAME MODE", lx, 255)
         self._draw_mode_card(screen, self._rect_hvh, "Human vs. Human", self.config.mode == GameMode.HUMAN_VS_HUMAN)
         self._draw_mode_card(screen, self._rect_hvc, "Human vs. Computer", self.config.mode == GameMode.HUMAN_VS_AI)
 
-        # ── Names & Difficulty ──
+        # ── Player Details (DYNAMIC TOGGLE) ──
         ai_active = self.config.mode == GameMode.HUMAN_VS_AI
 
-        if not ai_active:
-            self._draw_sect_label(screen, "PLAYER 1 NAME", 60, 420)
-            self._tb_p1.draw(screen, self._font_btn)
-            self._draw_sect_label(screen, "PLAYER 2 NAME", 280, 420)
-            self._tb_p2.draw(screen, self._font_btn)
-        else:
-            self._draw_sect_label(screen, "YOUR NAME", 60, 420)
-            self._tb_p1.draw(screen, self._font_btn)
-            self._draw_sect_label(screen, "OPPONENT", 60, 520)
-
-            # Pure UI display names (Engine still safely uses 1, 2, 3 internally)
-            diff_names = ["Easy (Ashraf)", "Medium (Yahia)", "Hard (Amr)"]
+        if ai_active:
+            self._draw_sect_label(screen, "YOUR NAME", lx, 440)
+            self._tb_p1.draw(screen, self._font_sect)
+            
+            self._draw_sect_label(screen, "OPPONENT", lx, 540)
+            opp_names = ["EASY (ASHRAF)", "MEDIUM (YAHIA)", "HARD (AMR)"]
             for i, r in enumerate(self._chip_rects):
                 is_sel = (self.config.difficulty.value == (i + 1))
-                self._draw_chip(screen, r, diff_names[i], is_sel)
+                self._draw_chip(screen, r, opp_names[i], is_sel)
+        else:
+            self._draw_sect_label(screen, "PLAYER 1 NAME", lx, 440)
+            self._tb_p1.draw(screen, self._font_sect)
+            
+            self._draw_sect_label(screen, "PLAYER 2 NAME", lx, 540)
+            self._tb_p2.draw(screen, self._font_sect)
 
-        # ── Start Button ──
         hover = self._rect_start.collidepoint(pygame.mouse.get_pos())
         self._draw_start_btn(screen, self._rect_start, hover)
 
+        right_w = 450
+        right_x = self.W - right_w
+        pygame.draw.line(screen, BG_PANEL, (right_x, 0), (right_x, self.H), width=2)
+        self._draw_board_preview(screen, right_x + (right_w // 2), self.H // 2)
+
     def _draw_mode_card(self, screen, rect, label, active):
         hover = rect.collidepoint(pygame.mouse.get_pos())
-        bg = BG_CARD_A if (active or hover) else BG_CARD
-        brd = BORDER_A if (active or hover) else BORDER
-        pygame.draw.rect(screen, bg, rect, border_radius=12)
-        pygame.draw.rect(screen, brd, rect, width=1, border_radius=12)
+        if active:
+            bg, brd, txt_col = BG_CARD_A, BORDER_A, TEXT_DIM
+        elif hover:
+            bg, brd, txt_col = BG_PANEL, BORDER_A, TEXT_PRI
+        else:
+            bg, brd, txt_col = BG_CARD, BORDER, TEXT_PRI
 
-        txt_col = TEXT_PRI if active else (TEXT_SEC if hover else TEXT_DIM)
-        lbl = self._font_btn.render(label, True, txt_col)
+        pygame.draw.rect(screen, bg, rect, border_radius=16)
+        pygame.draw.rect(screen, brd, rect, width=2, border_radius=16)
+
+        lbl_fnt = self._font_btn_dk if active else self._font_btn
+        lbl = lbl_fnt.render(label, True, txt_col)
         screen.blit(lbl, lbl.get_rect(center=rect.center))
 
     def _draw_chip(self, screen, rect, label, selected):
-        bg = BG_CARD_A if selected else BG_CARD
+        bg = TEAL if selected else BG_CARD
         brd = BORDER_A if selected else BORDER
+        pygame.draw.rect(screen, bg, rect, border_radius=24)
+        pygame.draw.rect(screen, brd, rect, width=2, border_radius=24)
 
-        pygame.draw.rect(screen, bg, rect, border_radius=20)
-        pygame.draw.rect(screen, brd, rect, width=1, border_radius=20)
-
-        txt_col = TEXT_PRI if selected else TEXT_DIM
+        txt_col = TEXT_DIM if selected else TEXT_SEC
         lbl = self._font_sect.render(label.upper(), True, txt_col)
         screen.blit(lbl, lbl.get_rect(center=rect.center))
 
     def _draw_start_btn(self, screen, rect, hover):
-        color = PURPLE if hover else PURPLE_DK
-        pygame.draw.rect(screen, color, rect, border_radius=12)
-        lbl = self._font_btn.render("START →", True, (255,255,255))
+        color = PURPLE if hover else BG_PANEL
+        txt_col = TEXT_DIM if hover else TEXT_PRI
+        pygame.draw.rect(screen, color, rect, border_radius=16)
+        lbl = self._font_btn_dk.render("START →", True, txt_col)
         screen.blit(lbl, lbl.get_rect(center=rect.center))
 
     def _draw_sect_label(self, screen, text, x, y, alpha=255):
-        lbl = self._font_sect.render(text, True, TEXT_DIM)
+        lbl = self._font_sect.render(text, True, TEXT_SEC)
         lbl.set_alpha(alpha)
         screen.blit(lbl, (x, y))
 
     def _draw_board_preview(self, screen, cx, cy):
-        """Draws the animated mini 9x9 grid, matching the real board UI."""
         cell, wall = 30, 8
         step = cell + wall
         total_size = 9 * cell + 8 * wall
         ox, oy = cx - total_size // 2, cy - total_size // 2
 
-        _BG_GUTTER, _CELL_IDLE, _CELL_BORDER = (12, 11, 20), (28, 25, 44), (38, 34, 60)
-        _WALL_COLOR, _SPEC_WHITE = (239, 159, 39), (255, 255, 255)
-        _P1_COLOR, _P2_COLOR = (210, 40, 40), (40, 80, 210)
-
-        gutter = pygame.Rect(ox - 3, oy - 3, total_size + 6, total_size + 6)
-        pygame.draw.rect(screen, _BG_GUTTER, gutter, border_radius=8)
-
-        frame = pygame.Rect(ox - 12, oy - 12, total_size + 24, total_size + 24)
-        pygame.draw.rect(screen, _CELL_BORDER, frame, width=2, border_radius=12)
-
+        pygame.draw.rect(screen, BG_PANEL, (ox - 20, oy - 20, total_size + 40, total_size + 40), border_radius=16)
+        
         for r in range(9):
             for c in range(9):
                 rect = pygame.Rect(ox + c * step, oy + r * step, cell, cell)
-                pygame.draw.rect(screen, _CELL_IDLE, rect, border_radius=4)
-                pygame.draw.rect(screen, _CELL_BORDER, rect, width=1, border_radius=4)
+                pygame.draw.rect(screen, BG_MAIN, rect, border_radius=6)
+                pygame.draw.rect(screen, TEXT_SEC, rect, width=1, border_radius=6)
 
-        for r, c in [(6, 3)]:
+        for r, c in [(3, 4)]:
             wr = pygame.Rect(ox + c * step, oy + (r + 1) * step - wall, cell * 2 + wall, wall)
-            pygame.draw.rect(screen, _WALL_COLOR, wr, border_radius=3)
-        for r, c in [(2, 2)]:
+            pygame.draw.rect(screen, AMBER, wr, border_radius=3)
+        for r, c in [(5, 5)]:
             wr = pygame.Rect(ox + (c + 1) * step - wall, oy + r * step, wall, cell * 2 + wall)
-            pygame.draw.rect(screen, _WALL_COLOR, wr, border_radius=3)
+            pygame.draw.rect(screen, AMBER, wr, border_radius=3)
 
         pulse = (math.sin(self._anim_t * 2) + 1) / 2
-        aura_r, pr = int(cell // 2 + 3 + 5 * pulse), cell // 3
-
-        for centre, col in (((ox + 4 * step + cell // 2, oy + 7 * step + cell // 2), _P1_COLOR),
-                            ((ox + 4 * step + cell // 2, oy + 1 * step + cell // 2), _P2_COLOR)):
+        aura_r = cell // 2 + 5
+        
+        _P1_COLOR, _P2_COLOR = (74, 118, 129), (193, 84, 61)
+        
+        for pos, col in [( (4, 1), _P2_COLOR), ( (4, 7), _P1_COLOR)]:
+            r, c = pos
+            centre = (ox + c * step + cell // 2, oy + r * step + cell // 2)
+            
             s = pygame.Surface((aura_r * 2, aura_r * 2), pygame.SRCALPHA)
-            pygame.draw.circle(s, (*col, int(40 + 60 * pulse)), (aura_r, aura_r), aura_r)
+            pygame.draw.circle(s, (*col, 80), (aura_r, aura_r), aura_r)
             screen.blit(s, (centre[0] - aura_r, centre[1] - aura_r))
-            pygame.draw.circle(screen, col, centre, pr)
-            pygame.draw.circle(screen, _SPEC_WHITE, centre, max(2, pr // 4))
+            pygame.draw.circle(screen, col, centre, cell // 3 + 2)
