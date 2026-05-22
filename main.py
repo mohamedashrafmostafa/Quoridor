@@ -2,6 +2,18 @@
 import pygame
 from src.ui.scene_manager import SceneManager
 from src.ui.menu_scene import MenuScene
+import os
+import sys
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
 
 import ctypes
 try:
