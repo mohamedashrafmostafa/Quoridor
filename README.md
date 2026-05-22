@@ -85,25 +85,48 @@ Or download it directly from GitHub:
 [https://github.com/amrrnagy/Quoridor_AI](https://github.com/amrrnagy/Quoridor_AI)
  
 ---
- 
-## 🚀 How to Compile and Run
- 
-To compile and execute the game from the terminal, ensure you have a standard C++ compiler (like `g++`) and Qt6 installed.
- 
-1. **Navigate to the project directory:**
+ ## 🚀 How to Play / Run the Game
+
+You can run Quoridor AI either by downloading the standalone executable (no installation required) or by running the Python source code directly.
+
+### Option 1: Play Immediately 
+If you just want to play the game without installing Python or any dependencies:
+1. Go to the **[Releases](../../releases)** section on the right side of this GitHub repository.
+2. Download the latest `Quoridor_AI.exe` file.
+3. Double-click the downloaded file to play immediately!
+
+---
+
+### Option 2: Run from Source (For Developers)
+If you want to view, edit, or run the raw Python code, ensure you have Python (version 3.x recommended) installed on your system.
+
+1. **Clone and navigate to the project directory:**
    ```bash
+   git clone [https://github.com/amrrnagy/Quoridor_AI.git](https://github.com/amrrnagy/Quoridor_AI.git)
    cd Quoridor_AI
    ```
- 
-2. **Configure and build with CMake:**
-   ```bash
-   mkdir build && cd build
-   cmake ..
-   cmake --build . --parallel
-   ```
- 
 
- 
+2. **Set up a virtual environment (Recommended):**
+   This keeps your project dependencies isolated from your global Python installation.
+   ```bash
+   python -m venv venv
+   
+   # Activate on Windows:
+   venv\Scripts\activate
+   
+   # Activate on macOS/Linux:
+   source venv/bin/activate
+   ```
+
+3. **Install the required dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Execute the game:**
+   ```bash
+   python main.py
+   ```
 ---
  
 ## 🎬 Demo Video
