@@ -10,27 +10,27 @@ from src.ui.scene_manager import Scene, SceneManager
 from src.ui.game_config import GameConfig
 from src.engine.board import P1, P2
 
-BG_MAIN    = ( 18,  17,  26)
-BG_CARD    = ( 30,  27,  46)
-PURPLE     = (127, 119, 221)
-PURPLE_DK  = ( 83,  74, 183)
-TEAL       = ( 29, 158, 117)
-LAVENDER   = (186, 175, 242)
-BORDER     = ( 58,  53,  85)
-BORDER_A   = (127, 119, 221)
-TEXT_PRI   = (240, 237, 248)
-TEXT_SEC   = (122, 117, 144)
-TEXT_DIM   = ( 90,  86, 112)
-RED_PLAYER = (210,  40,  40)
-BLUE_AI    = ( 40,  80, 210)
-OVERLAY    = (  8,   7,  18, 210)   
+BG_MAIN    = ( 98,  43,  20)  # Dark Earth Brown
+BG_PANEL   = (156, 102,  51)  # Tawny/Warm Brown
+BG_CARD    = (135,  85,  38)  # Mid-Tone Tawny
+BG_CARD_A  = (234, 222, 191)  # Pale Cream / Bone
+BORDER     = (137, 131, 104)  # Olive Green Borders
+BORDER_A   = (234, 222, 191)  # Cream Active Borders
+TEXT_PRI   = (234, 222, 191)  # Cream
+TEXT_SEC   = (234, 222, 191)  # Cream
+TEXT_DIM   = (137, 131, 104)  # Olive Green (for subtext)
+TEXT_INV   = ( 62,  27,  12)  # Dark Brown (Text on Cream)
+RED_PLAYER = (193,  84,  61)  # Terracotta
+BLUE_AI    = ( 74, 118, 129)  # Slate Blue
+OVERLAY    = ( 62,  27,  12, 190) # Very Dark Brown, semi-transparent
 
+# Earthy confetti particle colors
 _PARTICLE_PALETTE = [
-    (127, 119, 221, 255),  
-    ( 29, 158, 117, 255),  
-    (239, 159,  39, 255),  
-    (186, 175, 242, 255),  
-    (255, 255, 255, 210),  
+    (234, 222, 191, 255),  # Cream
+    (156, 102,  51, 255),  # Tawny
+    (137, 131, 104, 255),  # Olive Green
+    (193,  84,  61, 255),  # Terracotta
+    ( 74, 118, 129, 210),  # Slate Blue
 ]
 
 _SLIDE_DURATION_S = 0.85
@@ -115,9 +115,9 @@ class GameOverScene(Scene):
         self.screenshot = screenshot
 
         pygame.font.init()
-        self._font_h1  = pygame.font.SysFont("segoeui", 32)
-        self._font_sub = pygame.font.SysFont("segoeui", 14)
-        self._font_btn = pygame.font.SysFont("segoeui", 17)
+        self._font_h1  = pygame.font.SysFont("segoeui", 32, bold=True)
+        self._font_sub = pygame.font.SysFont("segoeui", 14, bold=True)
+        self._font_btn = pygame.font.SysFont("segoeui", 17, bold=True)
 
         self._cw = 360
         self._ch = 330
@@ -185,36 +185,36 @@ class GameOverScene(Scene):
             screen.blit(fb, card.topleft)
 
         fill = pygame.Surface((self._cw, self._ch), pygame.SRCALPHA)
-        fill.fill((*BG_CARD, 228))
+        fill.fill((*BG_CARD, 240))
         screen.blit(fill, card.topleft)
 
-        border_col = TEAL if self.winner_idx == P2 else PURPLE
-        pygame.draw.rect(screen, border_col, card, width=1, border_radius=18)
+        # Highlight color matches the winner
+        accent_col = RED_PLAYER if self.winner_idx == P1 else BLUE_AI
         
-        outer = card.inflate(3, 3)
+        pygame.draw.rect(screen, accent_col, card, width=2, border_radius=18)
+        
+        outer = card.inflate(4, 4)
         outer_s = pygame.Surface((outer.w, outer.h), pygame.SRCALPHA)
-        pygame.draw.rect(outer_s, (*border_col, 45), (0, 0, outer.w, outer.h), width=2, border_radius=19)
+        pygame.draw.rect(outer_s, (*accent_col, 60), (0, 0, outer.w, outer.h), width=2, border_radius=19)
         screen.blit(outer_s, outer.topleft)
 
         cx, ty = card.centerx, card.top + 24
 
         # ── Procedural Crown ──
         scale = 1.0 + 0.08 * math.sin(self._anim_t * math.tau / 1.4)
-        accent = TEAL if self.winner_idx == P2 else LAVENDER
-        _draw_icon_crown(screen, accent, cx, ty + 20, scale)
+        _draw_icon_crown(screen, accent_col, cx, ty + 20, scale)
 
         sub = self._font_sub.render("W I N N E R", True, TEXT_DIM)
         screen.blit(sub, sub.get_rect(centerx=cx, top=ty + 70))
 
         name_surf  = self._font_h1.render(self.winner, True, TEXT_PRI)
-        tint_surf  = self._font_h1.render(self.winner, True, accent)
+        tint_surf  = self._font_h1.render(self.winner, True, accent_col)
         tint_surf.set_alpha(95)
         name_rect  = name_surf.get_rect(centerx=cx, top=ty + 102)
         screen.blit(name_surf, name_rect)
         screen.blit(tint_surf, name_rect)
 
-        dot_col = RED_PLAYER if self.winner_idx == P1 else BLUE_AI
-        pygame.draw.circle(screen, dot_col, (name_rect.left - 14, name_rect.centery), 5)
+        pygame.draw.circle(screen, accent_col, (name_rect.left - 14, name_rect.centery), 6)
 
         div_y = card.top + 216
         pygame.draw.line(screen, BORDER, (card.left + 28, div_y), (card.right - 28, div_y))
@@ -227,38 +227,36 @@ class GameOverScene(Scene):
         self._draw_menu_btn(screen, self._btn_menu)
 
     def _draw_play_btn(self, screen: pygame.Surface, rect: pygame.Rect) -> None:
-        col = PURPLE if self._hover_play else PURPLE_DK
+        col = BG_CARD_A if self._hover_play else BG_PANEL
+        txt_col = TEXT_INV if self._hover_play else TEXT_PRI
         pygame.draw.rect(screen, col, rect, border_radius=10)
         
         if self._hover_play:
             glow = rect.inflate(4, 4)
             gs = pygame.Surface((glow.w, glow.h), pygame.SRCALPHA)
-            pygame.draw.rect(gs, (*PURPLE, 50), (0, 0, glow.w, glow.h), border_radius=12)
+            pygame.draw.rect(gs, (*BG_CARD_A, 50), (0, 0, glow.w, glow.h), border_radius=12)
             screen.blit(gs, glow.topleft)
             
-        lbl = self._font_btn.render("Play Again", True, (255, 255, 255))
+        lbl = self._font_btn.render("Play Again", True, txt_col)
         total_w = 16 + 12 + lbl.get_width()
         start_x = rect.x + (rect.w - total_w) // 2
         
-        _draw_icon_reset(screen, (255, 255, 255), start_x + 8, rect.centery)
+        _draw_icon_reset(screen, txt_col, start_x + 8, rect.centery)
         screen.blit(lbl, (start_x + 28, rect.centery - lbl.get_height() // 2))
 
     def _draw_menu_btn(self, screen: pygame.Surface, rect: pygame.Rect) -> None:
-        bg_col = BG_CARD + (0,) if not self._hover_menu else (45, 40, 72)
+        bg_col = BG_CARD_A if self._hover_menu else BG_CARD
         brd_col = BORDER_A if self._hover_menu else BORDER
+        txt_col = TEXT_INV if self._hover_menu else TEXT_PRI
         
-        if isinstance(bg_col, tuple) and len(bg_col) == 3:
-            pygame.draw.rect(screen, bg_col, rect, border_radius=10)
-        else:
-            pygame.draw.rect(screen, BG_CARD, rect, border_radius=10)
-            
-        pygame.draw.rect(screen, brd_col, rect, width=1, border_radius=10)
-        lbl = self._font_btn.render("Main Menu", True, TEXT_SEC)
+        pygame.draw.rect(screen, bg_col, rect, border_radius=10)
+        pygame.draw.rect(screen, brd_col, rect, width=2, border_radius=10)
         
+        lbl = self._font_btn.render("Main Menu", True, txt_col)
         total_w = 16 + 12 + lbl.get_width()
         start_x = rect.x + (rect.w - total_w) // 2
         
-        _draw_icon_home(screen, TEXT_SEC, start_x + 8, rect.centery)
+        _draw_icon_home(screen, txt_col, start_x + 8, rect.centery)
         screen.blit(lbl, (start_x + 28, rect.centery - lbl.get_height() // 2))
 
     def _restart(self) -> None:
