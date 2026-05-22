@@ -12,20 +12,20 @@ from src.engine.rules import apply_pawn_move, apply_wall, is_game_over, get_winn
 from src.ai.agent import AIAgent
 from src.ui.board_view import BoardView
 
-# ── colour palette ──
-BG_MAIN = (18, 17, 26)
-BG_PANEL = (14, 13, 24)
-BG_CARD = (30, 27, 46)
-BG_CARD_A = (45, 40, 72)
-BORDER = (58, 53, 85)
-BORDER_A = (127, 119, 221)
-TEXT_PRI = (240, 237, 248)
-TEXT_SEC = (122, 117, 144)
-TEXT_DIM = (90, 86, 112)
-RED_PLAYER = (210, 40, 40)
-BLUE_AI = (40, 80, 210)
-RED_DARK = (163, 45, 45)
-RED_LIGHT = (252, 235, 235)
+# ── Updated color palette (Earthy / Organic) ──
+BG_MAIN    = ( 98,  43,  20)  # Dark Earth Brown (Sidebar background)
+BG_PANEL   = (156, 102,  51)  # Tawny/Warm Brown (Board Area background)
+BG_CARD    = (135,  85,  38)  # Mid-Tone Tawny (Sidebar Cards)
+BG_CARD_A  = (234, 222, 191)  # Pale Cream (Active/Hover Buttons)
+BORDER     = (137, 131, 104)  # Olive Green (Borders)
+BORDER_A   = (234, 222, 191)  # Cream (Active Borders)
+TEXT_PRI   = (234, 222, 191)  # Cream (Primary Text)
+TEXT_SEC   = (234, 222, 191)  # Cream (Secondary Text)
+TEXT_DIM   = ( 62,  27,  12)  # Very Dark Brown (Text on Cream backgrounds)
+RED_PLAYER = (210,  40,  40)  # P1 Dot
+BLUE_AI    = ( 40,  80, 210)  # P2 Dot
+RED_DARK   = (163,  45,  45)  # Invalid move banner base
+RED_LIGHT  = (252, 235, 235)  # Invalid move banner text
 
 SIDEBAR_W = 250
 
@@ -78,8 +78,8 @@ class GameScene(Scene):
         super().__init__(manager)
         self.config = config
         pygame.font.init()
-        self._font_h2 = pygame.font.SysFont("segoeui", 20)
-        self._font_body = pygame.font.SysFont("segoeui", 16)
+        self._font_h2 = pygame.font.SysFont("segoeui", 20, bold=True)
+        self._font_body = pygame.font.SysFont("segoeui", 16, bold=True)
         self._font_small = pygame.font.SysFont("segoeui", 14)
         self._font_sect = pygame.font.SysFont("segoeui", 12, bold=True)
         self._font_mono = pygame.font.SysFont("consolas", 14)
@@ -142,7 +142,6 @@ class GameScene(Scene):
         pass
 
     def handle_event(self, event: pygame.event.Event) -> None:
-        # Ignore clicks if the game is over and we are waiting for the transition
         if self._game_over_timer > 0:
             return
 
@@ -217,7 +216,6 @@ class GameScene(Scene):
     def update(self, dt: float) -> None:
         self._anim_t += dt / 1000.0
 
-        # Countdown the Game Over delay if a player won
         if self._game_over_timer > 0:
             self._game_over_timer -= dt / 1000.0
             if self._game_over_timer <= 0:
@@ -226,12 +224,13 @@ class GameScene(Scene):
                 self.manager.switch(
                     GameOverScene(self.manager, self.config, self._pending_winner_name, self._pending_winner_idx,
                                   screenshot))
-                self._game_over_timer = -1.0  # Safe reset
+                self._game_over_timer = -1.0
 
         if self._invalid_timer > 0: self._invalid_timer = max(0.0, self._invalid_timer - dt)
         if self._ai_thinking and self._ai_result is not None: self._apply_ai_result()
 
     def draw(self, screen: pygame.Surface) -> None:
+        # Fill screen with Earth Brown, then board area with Tawny
         screen.fill(BG_MAIN)
         pygame.draw.rect(screen, BG_PANEL, pygame.Rect(0, 0, self.W - SIDEBAR_W, self.H))
 
@@ -273,9 +272,9 @@ class GameScene(Scene):
 
         lbl_title = self._font_h2.render(title, True, TEXT_PRI)
         screen.blit(lbl_title, lbl_title.get_rect(centerx=dialog.centerx, top=dy + 24))
-        lbl_sub1 = self._font_body.render(sub1, True, TEXT_SEC)
+        lbl_sub1 = self._font_body.render(sub1, True, TEXT_PRI)
         screen.blit(lbl_sub1, lbl_sub1.get_rect(centerx=dialog.centerx, top=dy + 64))
-        lbl_sub2 = self._font_body.render(sub2, True, TEXT_SEC)
+        lbl_sub2 = self._font_body.render(sub2, True, TEXT_PRI)
         screen.blit(lbl_sub2, lbl_sub2.get_rect(centerx=dialog.centerx, top=dy + 88))
 
         bw, bh, gap = 150, 44, 20
@@ -368,7 +367,6 @@ class GameScene(Scene):
         self._check_winner()
 
     def _check_winner(self) -> None:
-        # Instead of instantly switching, we queue up the winner and start a delay timer!
         if self._game_over_timer < 0 and is_game_over(self.board):
             winner_idx = get_winner(self.board)
             if winner_idx == P1:
@@ -379,7 +377,7 @@ class GameScene(Scene):
                 self._pending_winner_name = f"{ai_disp} (Blue)" if self.agent else f"{self.config.p2_name} (Blue)"
 
             self._pending_winner_idx = winner_idx
-            self._game_over_timer = 0.3  # Wait before the popup!
+            self._game_over_timer = 0.3
 
     def _flash_invalid(self, msg: str):
         self._invalid_msg = msg
@@ -410,7 +408,7 @@ class GameScene(Scene):
     def _draw_sidebar(self, screen: pygame.Surface) -> None:
         sx = self.W - SIDEBAR_W
         pygame.draw.rect(screen, BG_MAIN, pygame.Rect(sx, 0, SIDEBAR_W, self.H))
-        pygame.draw.line(screen, BORDER, (sx, 0), (sx, self.H))
+        pygame.draw.line(screen, BORDER, (sx, 0), (sx, self.H), width=2)
 
         x, y = sx + 16, 20
         bw = SIDEBAR_W - 32
@@ -418,7 +416,10 @@ class GameScene(Scene):
         # 1. Turn Indicator Card
         card1 = pygame.Rect(x, y, bw, 96)
         pygame.draw.rect(screen, BG_CARD, card1, border_radius=10)
-        screen.blit(self._font_sect.render("CURRENT TURN", True, TEXT_DIM), (x + 16, y + 14))
+        # Add border to cards for definition
+        pygame.draw.rect(screen, BORDER, card1, width=1, border_radius=10)
+        
+        screen.blit(self._font_sect.render("CURRENT TURN", True, TEXT_PRI), (x + 16, y + 14))
 
         current = self.board.current_player
         ai_names = {"Easy": "Ashraf", "Medium": "Yahia", "Hard": "Amr"}
@@ -433,7 +434,7 @@ class GameScene(Scene):
         screen.blit(self._font_h2.render(name, True, TEXT_PRI), (x + 50, y + 49))
 
         timer_str = f"{_time.monotonic() - self._turn_start:4.1f}s"
-        ts = self._font_mono.render(timer_str, True, TEXT_DIM)
+        ts = self._font_mono.render(timer_str, True, TEXT_PRI)
         screen.blit(ts, (card1.right - ts.get_width() - 16, y + 14))
         y += 112
 
@@ -441,9 +442,10 @@ class GameScene(Scene):
         if self._ai_thinking:
             bar_card = pygame.Rect(x, y, bw, 64)
             pygame.draw.rect(screen, BG_CARD, bar_card, border_radius=10)
+            pygame.draw.rect(screen, BORDER, bar_card, width=1, border_radius=10)
 
             ai_disp = ai_names.get(self.config.difficulty_label, "AI").upper()
-            screen.blit(self._font_sect.render(f"{ai_disp} THINKING…", True, TEXT_DIM), (x + 16, y + 14))
+            screen.blit(self._font_sect.render(f"{ai_disp} THINKING…", True, TEXT_PRI), (x + 16, y + 14))
 
             prog = min(1.0, (_time.monotonic() - self._ai_start_t) / max(0.1, self._budget))
             pygame.draw.rect(screen, BORDER, pygame.Rect(x + 16, y + 40, bw - 32, 6), border_radius=3)
@@ -454,7 +456,8 @@ class GameScene(Scene):
         # 3. Walls Remaining Card
         card2 = pygame.Rect(x, y, bw, 120)
         pygame.draw.rect(screen, BG_CARD, card2, border_radius=10)
-        screen.blit(self._font_sect.render("WALLS REMAINING", True, TEXT_DIM), (x + 16, y + 14))
+        pygame.draw.rect(screen, BORDER, card2, width=1, border_radius=10)
+        screen.blit(self._font_sect.render("WALLS REMAINING", True, TEXT_PRI), (x + 16, y + 14))
 
         walls = [self.board.get_walls_left(P1), self.board.get_walls_left(P2)]
         for i, (cnt, col, label) in enumerate(zip(walls, [RED_PLAYER, BLUE_AI], ["Red", "Blue"])):
@@ -487,9 +490,16 @@ class GameScene(Scene):
         col = BG_CARD_A if hover and enabled else BG_CARD
         bc = BORDER_A if hover and enabled else BORDER
         pygame.draw.rect(screen, col, rect, border_radius=8)
-        pygame.draw.rect(screen, bc, rect, width=1, border_radius=8)
+        pygame.draw.rect(screen, bc, rect, width=2, border_radius=8)
 
-        txt_col = TEXT_PRI if enabled else TEXT_DIM
+        # Dynamic text colour so it doesn't vanish on the cream hover!
+        if not enabled:
+            txt_col = BORDER # Dim Olive Green
+        elif hover:
+            txt_col = TEXT_DIM # Dark Brown on Cream
+        else:
+            txt_col = TEXT_PRI # Cream on Dark Brown
+
         lbl = self._font_body.render(text, True, txt_col)
         total_w = 16 + 8 + lbl.get_width()
         start_x = rect.x + (rect.w - total_w) // 2
@@ -501,9 +511,11 @@ class GameScene(Scene):
         bg = BG_CARD_A if hover else BG_CARD
         brd = BORDER_A if hover else BORDER
         pygame.draw.rect(screen, bg, rect, border_radius=10)
-        pygame.draw.rect(screen, brd, rect, width=1, border_radius=10)
+        pygame.draw.rect(screen, brd, rect, width=2, border_radius=10)
 
-        txt_col = TEXT_PRI if hover else TEXT_SEC
+        # Dynamic text colour
+        txt_col = TEXT_DIM if hover else TEXT_PRI
+
         lbl = self._font_body.render(text, True, txt_col)
         total_w = 16 + 12 + lbl.get_width()
         start_x = rect.x + (rect.w - total_w) // 2
