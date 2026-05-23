@@ -45,18 +45,45 @@ def _build_hot_zone(p_path, opp_path, p_pos, opp_pos, radius: int = 2) -> set:
     return zone
 
 
-def _detour_delta(board, player: int, anchor, horizontal: bool) -> int:
+def wall_blocks_path(path: list, anchor: tuple, horizontal: bool) -> bool:
+    """
+    Return True if a wall at anchor blocks any step along the given path.
+    This allows us to completely bypass expensive copy/BFS calculations
+    if a wall doesn't even touch a player's shortest path.
+    """
+    if not path:
+        return False
+    ar, ac = anchor
+    if horizontal:
+        blocked = {
+            ((ar, ac), (ar + 1, ac)),
+            ((ar + 1, ac), (ar, ac)),
+            ((ar, ac + 1), (ar + 1, ac + 1)),
+            ((ar + 1, ac + 1), (ar, ac + 1))
+        }
+    else:
+        blocked = {
+            ((ar, ac), (ar, ac + 1)),
+            ((ar, ac + 1), (ar, ac)),
+            ((ar + 1, ac), (ar + 1, ac + 1)),
+            ((ar + 1, ac + 1), (ar + 1, ac))
+        }
+    
+    for i in range(len(path) - 1):
+        if (path[i], path[i+1]) in blocked:
+            return True
+    return False
+
+
+def _detour_delta(board, player: int, anchor, horizontal: bool, path: list) -> int:
     """
     Return how many extra steps the wall forces `player` to walk.
-    Positive → wall lengthens their path (hurts them).
-    0        → wall is irrelevant to this player.
-    Returns 0 if pathfinding returns None (shouldn't happen for valid walls,
-    but guards against edge cases).
+    If the wall doesn't block their current shortest path, delta is guaranteed to be 0.
     """
-    before = shortest_path_length(board, player)
-    if before is None:
+    if not wall_blocks_path(path, anchor, horizontal):
         return 0
 
+    before = len(path) - 1
     sim = board.copy()
     if horizontal:
         sim.h_walls.add(anchor)
@@ -70,7 +97,7 @@ def _detour_delta(board, player: int, anchor, horizontal: bool) -> int:
 
 
 # Heuristic score for a wall placement — used for move ordering
-def _score_wall(board, anchor, horizontal: bool, player: int, opp: int) -> float:
+def _score_wall(board, anchor, horizontal: bool, player: int, opp: int, p_path: list, opp_path: list) -> float:
     """
     Higher score → try this wall earlier → better α-β cutoffs.
 
@@ -80,8 +107,8 @@ def _score_wall(board, anchor, horizontal: bool, player: int, opp: int) -> float
       +3   if opponent is within 3 rows of their goal (urgency bonus)
       +1   if wall is close to opponent pawn (positional pressure)
     """
-    opp_delta   = _detour_delta(board, opp,    anchor, horizontal)
-    self_delta  = _detour_delta(board, player, anchor, horizontal)
+    opp_delta   = _detour_delta(board, opp,    anchor, horizontal, opp_path)
+    self_delta  = _detour_delta(board, player, anchor, horizontal, p_path)
 
     opp_pos  = board.get_position(opp)
     opp_goal = GOAL_ROW[opp]
@@ -94,18 +121,13 @@ def _score_wall(board, anchor, horizontal: bool, player: int, opp: int) -> float
     return opp_delta * 10 - self_delta * 5 + urgency + proximity
 
 
+
 # Return a list of actions for the current player, ordered for α-β efficiency
 def _get_strategic_actions(board):
     """
       1. Pawn moves — sorted so goal-advancing moves come first.
       2. Wall placements — filtered to the Hot Zone, then sorted by
          _score_wall (best walls first).
-
-    Branching-factor target
-    -----------------------
-    Original (radius-1 hot zone, no scoring): ~8-15 actions → depth-10 in 0.05 s
-    This version (radius-2 + pawn halo + scoring): ~25-50 actions → fills 2 s budget
-    at depth 6-8 in Python, which translates to much stronger play.
     """
     player = board.current_player
     opp    = 1 - player
@@ -123,6 +145,9 @@ def _get_strategic_actions(board):
         key=lambda a: pawn_priority(a["target"])
     )
 
+    if board.walls_left[player] <= 0:
+        return pawn_actions
+
     # ── Wall candidates — build hot zone ─────────────────────────────────
     p_pos   = board.get_position(player)
     opp_pos = board.get_position(opp)
@@ -133,18 +158,52 @@ def _get_strategic_actions(board):
 
     # ── Filter valid walls to hot zone, then score them ───────────────────
     wall_candidates = []
-    for anchor, horiz in get_valid_walls(board, player):
-        r, c = anchor
-        # A wall at `anchor` physically affects cells (r,c), (r,c+1) for
-        # horizontal and (r,c), (r+1,c) for vertical.  Check both cells.
-        if horiz:
-            relevant_cells = [(r, c), (r, c + 1), (r + 1, c), (r + 1, c + 1)]
-        else:
-            relevant_cells = [(r, c), (r + 1, c), (r, c + 1), (r + 1, c + 1)]
+    for r in range(BOARD_SIZE - 1):
+        for c in range(BOARD_SIZE - 1):
+            anchor = (r, c)
+            for horiz in (True, False):
+                # 1. Hot zone relevance check first (extremely fast)
+                if horiz:
+                    relevant_cells = [(r, c), (r, c + 1), (r + 1, c), (r + 1, c + 1)]
+                else:
+                    relevant_cells = [(r, c), (r + 1, c), (r, c + 1), (r + 1, c + 1)]
 
-        if any(cell in hot_zone for cell in relevant_cells):
-            score = _score_wall(board, anchor, horiz, player, opp)
-            wall_candidates.append((score, anchor, horiz))
+                if not any(cell in hot_zone for cell in relevant_cells):
+                    continue
+
+                # 2. Fast validity checks (overlaps, crossings)
+                if horiz:
+                    if anchor in board.h_walls:
+                        continue
+                    if (r, c - 1) in board.h_walls:
+                        continue
+                    if (r, c + 1) in board.h_walls:
+                        continue
+                    if anchor in board.v_walls:
+                        continue
+                else:
+                    if anchor in board.v_walls:
+                        continue
+                    if (r - 1, c) in board.v_walls:
+                        continue
+                    if (r + 1, c) in board.v_walls:
+                        continue
+                    if anchor in board.h_walls:
+                        continue
+
+                # 3. Connectivity check (slower, but only done for hot-zone walls)
+                test_board = board.copy()
+                if horiz:
+                    test_board.h_walls.add(anchor)
+                else:
+                    test_board.v_walls.add(anchor)
+
+                if not both_players_have_path(test_board):
+                    continue
+
+                # 4. Score the valid wall candidate
+                score = _score_wall(board, anchor, horiz, player, opp, p_path, opp_path)
+                wall_candidates.append((score, anchor, horiz))
 
     # Sort walls: highest score first
     wall_candidates.sort(key=lambda x: -x[0])
@@ -180,10 +239,14 @@ def get_best_move_iterative(board, max_depth: int, ai_player: int,
         if depth > 1 and remaining < time_limit * 0.10:
             break
 
-        _, move = minimax(board, depth, float('-inf'), float('inf'),
-                          True, ai_player, use_adv, start_time, time_limit, game_history)
-        if move:
-            best_action = move
+        try:
+            _, move = minimax(board, depth, float('-inf'), float('inf'),
+                              True, ai_player, use_adv, start_time, time_limit, game_history)
+            if move:
+                best_action = move
+        except TimeoutError:
+            # An incomplete depth iteration was interrupted. Discard its results.
+            break
 
     return best_action
 
@@ -194,8 +257,10 @@ def minimax(board, depth: int, alpha: float, beta: float,
             start_t: float, limit: float, game_history: list):
 
     # ── Transposition-table lookup ────────────────────────────────────────
+    # Include wall counts to prevent collisions with differing reserve states
     key = (board.positions[0], board.positions[1],
            frozenset(board.h_walls), frozenset(board.v_walls),
+           board.walls_left[0], board.walls_left[1],
            board.current_player)
 
     if key in _transposition_table:
@@ -204,8 +269,10 @@ def minimax(board, depth: int, alpha: float, beta: float,
             return stored_score, stored_move
 
     # ── Terminal / leaf node ──────────────────────────────────────────────
-    if time.time() - start_t > limit or depth == 0 or is_game_over(board):
-        return evaluate_board(board, ai_player, use_adv, game_history), None
+    if time.time() - start_t > limit:
+        raise TimeoutError("Search time limit exceeded")
+    if depth == 0 or is_game_over(board):
+        return evaluate_board(board, ai_player, use_adv, game_history, depth), None
 
     # ── Generate and order actions ────────────────────────────────────────
     actions = _get_strategic_actions(board)
