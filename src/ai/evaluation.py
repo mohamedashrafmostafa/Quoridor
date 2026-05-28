@@ -19,15 +19,16 @@ def _centralisation(col: int) -> float:
     return 1.0 - abs(col - centre) / centre
 
 def evaluate_board(board: Board, ai_player: int,
-                   use_advanced_heuristic: bool, game_history: list = None) -> float:
+                   use_advanced_heuristic: bool, game_history: list = None, depth: int = 0) -> float:
 
 
     opponent = 1 - ai_player
 
     if board.winner == ai_player:
-        return WIN_SCORE
+        return WIN_SCORE + depth
     if board.winner is not None:
-        return LOSS_SCORE
+        return LOSS_SCORE - depth
+
 
     ai_dist  = shortest_path_length(board, ai_player)
     opp_dist = shortest_path_length(board, opponent)
@@ -52,7 +53,11 @@ def evaluate_board(board: Board, ai_player: int,
         # Wall advantage — re-weighted upward
         score += (ai_walls - opp_walls) * WALL_WEIGHT
 
-        score += (ai_walls - opp_walls) * TEMPO_WEIGHT
+        # Tempo — just having walls available (option value)
+        # Both players' wall counts are normalized to [0,1] relative to
+        # the starting count (10 walls each).
+        score += ((ai_walls - opp_walls) / 10.0) * TEMPO_WEIGHT
+
 
         # Tie-breaking positional sub-scores
         if abs(path_diff) < 1.5:

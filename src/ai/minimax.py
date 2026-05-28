@@ -33,6 +33,7 @@ def _detour_delta(board, player: int, anchor, horizontal: bool) -> int:
     if before is None:
         return 0
 
+    before = len(path) - 1
     sim = board.copy()
     if horizontal:
         sim.h_walls.add(anchor)
@@ -62,6 +63,7 @@ def _score_wall(board, anchor, horizontal: bool, player: int, opp: int) -> float
     return opp_delta * 10 - self_delta * 5 + urgency + proximity
 
 
+
 # Return a list of actions for the current player, ordered for α-β efficiency
 def _get_strategic_actions(board):
     
@@ -88,18 +90,52 @@ def _get_strategic_actions(board):
     hot_zone = _build_hot_zone(p_path, opp_path, p_pos, opp_pos, radius=2)
 
     wall_candidates = []
-    for anchor, horiz in get_valid_walls(board, player):
-        r, c = anchor
-        # A wall at `anchor` physically affects cells (r,c), (r,c+1) for
-        # horizontal and (r,c), (r+1,c) for vertical.  Check both cells.
-        if horiz:
-            relevant_cells = [(r, c), (r, c + 1), (r + 1, c), (r + 1, c + 1)]
-        else:
-            relevant_cells = [(r, c), (r + 1, c), (r, c + 1), (r + 1, c + 1)]
+    for r in range(BOARD_SIZE - 1):
+        for c in range(BOARD_SIZE - 1):
+            anchor = (r, c)
+            for horiz in (True, False):
+                # 1. Hot zone relevance check first (extremely fast)
+                if horiz:
+                    relevant_cells = [(r, c), (r, c + 1), (r + 1, c), (r + 1, c + 1)]
+                else:
+                    relevant_cells = [(r, c), (r + 1, c), (r, c + 1), (r + 1, c + 1)]
 
-        if any(cell in hot_zone for cell in relevant_cells):
-            score = _score_wall(board, anchor, horiz, player, opp)
-            wall_candidates.append((score, anchor, horiz))
+                if not any(cell in hot_zone for cell in relevant_cells):
+                    continue
+
+                # 2. Fast validity checks (overlaps, crossings)
+                if horiz:
+                    if anchor in board.h_walls:
+                        continue
+                    if (r, c - 1) in board.h_walls:
+                        continue
+                    if (r, c + 1) in board.h_walls:
+                        continue
+                    if anchor in board.v_walls:
+                        continue
+                else:
+                    if anchor in board.v_walls:
+                        continue
+                    if (r - 1, c) in board.v_walls:
+                        continue
+                    if (r + 1, c) in board.v_walls:
+                        continue
+                    if anchor in board.h_walls:
+                        continue
+
+                # 3. Connectivity check (slower, but only done for hot-zone walls)
+                test_board = board.copy()
+                if horiz:
+                    test_board.h_walls.add(anchor)
+                else:
+                    test_board.v_walls.add(anchor)
+
+                if not both_players_have_path(test_board):
+                    continue
+
+                # 4. Score the valid wall candidate
+                score = _score_wall(board, anchor, horiz, player, opp, p_path, opp_path)
+                wall_candidates.append((score, anchor, horiz))
 
     # Sort walls: highest score first
     wall_candidates.sort(key=lambda x: -x[0])
@@ -128,10 +164,14 @@ def get_best_move_iterative(board, max_depth: int, ai_player: int,
         if depth > 1 and remaining < time_limit * 0.10:
             break
 
-        _, move = minimax(board, depth, float('-inf'), float('inf'),
-                          True, ai_player, use_adv, start_time, time_limit, game_history)
-        if move:
-            best_action = move
+        try:
+            _, move = minimax(board, depth, float('-inf'), float('inf'),
+                              True, ai_player, use_adv, start_time, time_limit, game_history)
+            if move:
+                best_action = move
+        except TimeoutError:
+            # An incomplete depth iteration was interrupted. Discard its results.
+            break
 
     return best_action
 
@@ -143,6 +183,7 @@ def minimax(board, depth: int, alpha: float, beta: float,
 
     key = (board.positions[0], board.positions[1],
            frozenset(board.h_walls), frozenset(board.v_walls),
+           board.walls_left[0], board.walls_left[1],
            board.current_player)
 
     if key in _transposition_table:

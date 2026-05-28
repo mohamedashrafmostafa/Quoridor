@@ -97,7 +97,7 @@ If you just want to play the game without installing Python or any dependencies:
 
 ---
 
-### Option 2: Run from Source (For Developers)
+### Option 2: Run from Source 
 If you want to view, edit, or run the raw Python code, ensure you have Python (version 3.x recommended) installed on your system.
 
 1. **Clone and navigate to the project directory:**
