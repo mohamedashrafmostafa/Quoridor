@@ -2,11 +2,9 @@
 from ..engine.board import Board, BOARD_SIZE, GOAL_ROW
 from ..engine.pathfinding import shortest_path_length
 
-# ── Score constants ────────────────────────────────────────────────────────
 WIN_SCORE  =  10_000.0
 LOSS_SCORE = -10_000.0
 
-# ── Tunable weights ────────────────────────────────────────────────────────
 # Each unit of path-length difference = 1.0 (baseline)
 WALL_WEIGHT         = 0.7   # walls are worth more than "slightly nice to have"
 TEMPO_WEIGHT        = 0.15  # having more reserve walls = options (small but consistent bonus)
@@ -17,32 +15,26 @@ END_GAME_THRESHOLD  = 2     # opponent steps-to-goal ≤ this → end-game urgen
 
 
 def _centralisation(col: int) -> float:
-    centre = BOARD_SIZE // 2          # = 4 on a 9×9 board
+    centre = BOARD_SIZE // 2          
     return 1.0 - abs(col - centre) / centre
 
 def evaluate_board(board: Board, ai_player: int,
                    use_advanced_heuristic: bool, game_history: list = None) -> float:
 
-    # Returns a score from the AI's perspective.
-    # Positive  → AI is winning.
-    # Negative  → Opponent is winning.
 
     opponent = 1 - ai_player
 
-    # ── Terminal states ───────────────────────────────────────────────────
     if board.winner == ai_player:
         return WIN_SCORE
     if board.winner is not None:
         return LOSS_SCORE
 
-    # ── Path lengths ──────────────────────────────────────────────────────
     ai_dist  = shortest_path_length(board, ai_player)
     opp_dist = shortest_path_length(board, opponent)
 
     if ai_dist  is None: return LOSS_SCORE   # AI is completely blocked
     if opp_dist is None: return WIN_SCORE    # Opponent is completely blocked
 
-    # ── Core race score ───────────────────────────────────────────────────
 
     # Positive when opponent needs more steps than AI.
     path_diff = float(opp_dist - ai_dist)
@@ -53,7 +45,6 @@ def evaluate_board(board: Board, ai_player: int,
 
     score = path_diff
 
-    # ── Advanced heuristic block (Hard Level) ────────────────────────────
     if use_advanced_heuristic:
         ai_walls  = board.get_walls_left(ai_player)
         opp_walls = board.get_walls_left(opponent)
@@ -61,9 +52,6 @@ def evaluate_board(board: Board, ai_player: int,
         # Wall advantage — re-weighted upward
         score += (ai_walls - opp_walls) * WALL_WEIGHT
 
-        # Tempo — just having walls available (option value)
-        # Both players' wall counts are normalized to [0,1] relative to
-        # the starting count (10 walls each).
         score += (ai_walls - opp_walls) * TEMPO_WEIGHT
 
         # Tie-breaking positional sub-scores

@@ -107,9 +107,7 @@ class Board:
         if pos[0] == GOAL_ROW[player]:
             self.winner = player
 
-#will be checked when ai module is implemented
     def copy(self) -> "Board":
-        """Return a deep copy (useful for AI look-ahead)."""
         import copy
         return copy.deepcopy(self)
     

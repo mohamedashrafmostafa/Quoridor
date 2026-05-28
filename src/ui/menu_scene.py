@@ -49,7 +49,6 @@ class _AmbientParticle:
         screen.blit(s, (self.x, self.y))
 
 class _TextBox:
-    """Interactive text input box for player names."""
     def __init__(self, rect, default_text=""):
         self.rect = rect
         self.text = default_text
