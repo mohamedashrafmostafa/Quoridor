@@ -159,6 +159,7 @@ The 9×9 grid features valid move highlighting, pawn tracking, and real-time wal
 The system instantly detects when a pawn reaches the opposing baseline, halts inputs, and declares the winner.
 
 <img width="371" height="340" alt="Screenshot 2026-05-28 212008" src="https://github.com/user-attachments/assets/045780db-7ebb-454f-a5bc-52da91670816" />
+
 ---
 
 
