@@ -107,18 +107,9 @@ class Board:
         if pos[0] == GOAL_ROW[player]:
             self.winner = player
 
-#will be checked when ai module is implemented
     def copy(self) -> "Board":
-        """Return a fast, shallow-deep copy of the board."""
-        new_board = Board.__new__(Board)
-        new_board.positions = self.positions.copy()
-        new_board.h_walls = self.h_walls.copy()
-        new_board.v_walls = self.v_walls.copy()
-        new_board.walls_left = self.walls_left.copy()
-        new_board.current_player = self.current_player
-        new_board.winner = self.winner
-        return new_board
-
+        import copy
+        return copy.deepcopy(self)
     
 
 # helper methods for visualization 

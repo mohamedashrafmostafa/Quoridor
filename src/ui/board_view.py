@@ -1,8 +1,4 @@
-"""
-src/ui/board_view.py  —  Grandmaster Edition
-============================================
-Rendering engine for the 9×9 Quoridor board.
-"""
+
 from __future__ import annotations
 import math
 import pygame

@@ -3,31 +3,14 @@ import time
 from ..engine import *
 from ..ai.evaluation import evaluate_board
 
-
-"""
-Transposition table
-Each entry: { key → (depth, score, best_move) }
-Only trust a cached result when the stored depth >= the requested depth.
-"""
 _transposition_table: dict = {}
 
 
 # Get Tactical Cells
 def _build_hot_zone(p_path, opp_path, p_pos, opp_pos, radius: int = 2) -> set:
-    """
-    Three layers:
-      A) All cells within `radius` steps of any cell on EITHER shortest path.
-         radius=2 captures walls that force a one-cell detour around the path,
-         plus walls that create a two-cell detour (the most common traps).
-      B) A 2-cell halo around EACH pawn regardless of path length — ensures
-         we never ignore threats right next to a player.
-      C) Path-intersection zone: the 3×3 boxes around the point where the two
-         paths cross (if they do).  Walls here affect BOTH players at once,
-         which is exactly where the cleverest walls live.
-    """
+    
     zone = set()
 
-    # Layer A — expanded corridor around both shortest paths
     for path in (p_path, opp_path):
         if not path:
             continue
@@ -36,7 +19,6 @@ def _build_hot_zone(p_path, opp_path, p_pos, opp_pos, radius: int = 2) -> set:
                 for dc in range(-radius, radius + 1):
                     zone.add((r + dr, c + dc))
 
-    # Layer B — immediate threat halo around each pawn
     for (pr, pc) in (p_pos, opp_pos):
         for dr in range(-2, 3):
             for dc in range(-2, 3):
@@ -45,42 +27,10 @@ def _build_hot_zone(p_path, opp_path, p_pos, opp_pos, radius: int = 2) -> set:
     return zone
 
 
-def wall_blocks_path(path: list, anchor: tuple, horizontal: bool) -> bool:
-    """
-    Return True if a wall at anchor blocks any step along the given path.
-    This allows us to completely bypass expensive copy/BFS calculations
-    if a wall doesn't even touch a player's shortest path.
-    """
-    if not path:
-        return False
-    ar, ac = anchor
-    if horizontal:
-        blocked = {
-            ((ar, ac), (ar + 1, ac)),
-            ((ar + 1, ac), (ar, ac)),
-            ((ar, ac + 1), (ar + 1, ac + 1)),
-            ((ar + 1, ac + 1), (ar, ac + 1))
-        }
-    else:
-        blocked = {
-            ((ar, ac), (ar, ac + 1)),
-            ((ar, ac + 1), (ar, ac)),
-            ((ar + 1, ac), (ar + 1, ac + 1)),
-            ((ar + 1, ac + 1), (ar + 1, ac))
-        }
-    
-    for i in range(len(path) - 1):
-        if (path[i], path[i+1]) in blocked:
-            return True
-    return False
+def _detour_delta(board, player: int, anchor, horizontal: bool) -> int:
 
-
-def _detour_delta(board, player: int, anchor, horizontal: bool, path: list) -> int:
-    """
-    Return how many extra steps the wall forces `player` to walk.
-    If the wall doesn't block their current shortest path, delta is guaranteed to be 0.
-    """
-    if not wall_blocks_path(path, anchor, horizontal):
+    before = shortest_path_length(board, player)
+    if before is None:
         return 0
 
     before = len(path) - 1
@@ -97,18 +47,10 @@ def _detour_delta(board, player: int, anchor, horizontal: bool, path: list) -> i
 
 
 # Heuristic score for a wall placement — used for move ordering
-def _score_wall(board, anchor, horizontal: bool, player: int, opp: int, p_path: list, opp_path: list) -> float:
-    """
-    Higher score → try this wall earlier → better α-β cutoffs.
-
-    Criteria (in decreasing importance):
-      +10  per extra step forced on opponent
-      -5   per extra step forced on self  (avoid self-harm)
-      +3   if opponent is within 3 rows of their goal (urgency bonus)
-      +1   if wall is close to opponent pawn (positional pressure)
-    """
-    opp_delta   = _detour_delta(board, opp,    anchor, horizontal, opp_path)
-    self_delta  = _detour_delta(board, player, anchor, horizontal, p_path)
+def _score_wall(board, anchor, horizontal: bool, player: int, opp: int) -> float:
+   
+    opp_delta   = _detour_delta(board, opp,    anchor, horizontal)
+    self_delta  = _detour_delta(board, player, anchor, horizontal)
 
     opp_pos  = board.get_position(opp)
     opp_goal = GOAL_ROW[opp]
@@ -124,15 +66,10 @@ def _score_wall(board, anchor, horizontal: bool, player: int, opp: int, p_path: 
 
 # Return a list of actions for the current player, ordered for α-β efficiency
 def _get_strategic_actions(board):
-    """
-      1. Pawn moves — sorted so goal-advancing moves come first.
-      2. Wall placements — filtered to the Hot Zone, then sorted by
-         _score_wall (best walls first).
-    """
+    
     player = board.current_player
     opp    = 1 - player
 
-    # ── Pawn moves (always included, sorted toward goal) ─────────────────
     goal_row = GOAL_ROW[player]
     pawn_moves = get_valid_pawn_moves(board, player)
 
@@ -145,10 +82,6 @@ def _get_strategic_actions(board):
         key=lambda a: pawn_priority(a["target"])
     )
 
-    if board.walls_left[player] <= 0:
-        return pawn_actions
-
-    # ── Wall candidates — build hot zone ─────────────────────────────────
     p_pos   = board.get_position(player)
     opp_pos = board.get_position(opp)
     p_path  = get_full_path(board, player)
@@ -156,7 +89,6 @@ def _get_strategic_actions(board):
 
     hot_zone = _build_hot_zone(p_path, opp_path, p_pos, opp_pos, radius=2)
 
-    # ── Filter valid walls to hot zone, then score them ───────────────────
     wall_candidates = []
     for r in range(BOARD_SIZE - 1):
         for c in range(BOARD_SIZE - 1):
@@ -218,14 +150,7 @@ def _get_strategic_actions(board):
 # Iterative Deepening
 def get_best_move_iterative(board, max_depth: int, ai_player: int,
                             use_adv: bool, time_limit: float, game_history: list = None):
-    """
-    Searches depth-by-depth until the time budget is exhausted or max_depth
-    is reached.  The last *fully completed* search result is returned.
 
-    Time-management tweak: we skip launching a new depth iteration if less
-    than 10 % of the budget remains (avoids wasting time on an incomplete
-    search that we'd discard anyway).
-    """
     start_time  = time.time()
     best_action = None
     _transposition_table.clear()
@@ -256,8 +181,6 @@ def minimax(board, depth: int, alpha: float, beta: float,
             maximizing: bool, ai_player: int, use_adv: bool,
             start_t: float, limit: float, game_history: list):
 
-    # ── Transposition-table lookup ────────────────────────────────────────
-    # Include wall counts to prevent collisions with differing reserve states
     key = (board.positions[0], board.positions[1],
            frozenset(board.h_walls), frozenset(board.v_walls),
            board.walls_left[0], board.walls_left[1],
@@ -268,13 +191,9 @@ def minimax(board, depth: int, alpha: float, beta: float,
         if stored_depth >= depth:          # only trust deeper/equal entries
             return stored_score, stored_move
 
-    # ── Terminal / leaf node ──────────────────────────────────────────────
-    if time.time() - start_t > limit:
-        raise TimeoutError("Search time limit exceeded")
-    if depth == 0 or is_game_over(board):
-        return evaluate_board(board, ai_player, use_adv, game_history, depth), None
+    if time.time() - start_t > limit or depth == 0 or is_game_over(board):
+        return evaluate_board(board, ai_player, use_adv, game_history), None
 
-    # ── Generate and order actions ────────────────────────────────────────
     actions = _get_strategic_actions(board)
 
     best_move = None

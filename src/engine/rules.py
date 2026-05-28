@@ -167,14 +167,7 @@ def get_winner(board: Board) -> Optional[int]:
 
 # API to help iterate through legal actions only
 def get_all_legal_actions(board: Board) -> List[dict]:
-    """
-    Return a unified list of legal actions for the current player.
-    Each action is a dict:
-      {"type": "move",  "target": (r, c)}
-      {"type": "wall",  "anchor": (r, c), "horizontal": bool}
 
-    Useful for the AI to iterate over actions in a uniform way.
-    """
     player  = board.current_player
     actions = []
 
