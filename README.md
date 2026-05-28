@@ -9,13 +9,13 @@
  
 ## 👥 Team Members
  
-| # | Name | Student ID |
-|---|------|------------|
-| 1 |Amr Ahmed Nagy |2300162|
-| 2 |Mohamed Ashraf Mohamed |2300475|
-| 3 |Omar Ahmed Morshed|2300131|
-| 4 |Ali Ahmed Ayman |2300346|
-| 5 |Mohamed EHab Abdelbary|2300570|
+| # | Name                   | Student ID |
+|---|------------------------|------------|
+| 1 | Amr Ahmed Nagy         |2300162|
+| 2 | Mohamed Ashraf Mohamed |2300475|
+| 3 | Omar Ahmed Morshed     |2300131|
+| 4 | Ali Ahmed Ayman        |2300346|
+| 5 | Mohamed Ehab Abdelbary |2300570|
  
 ---
  
@@ -77,12 +77,12 @@ This separation ensures the AI and game logic can be tested independently of the
 Clone the repository using Git:
  
 ```bash
-git clone https://github.com/amrrnagy/Quoridor_AI.git
-cd Quoridor_AI
+git clone https://github.com/amrrnagy/Quoridor.git
+cd Quoridor
 ```
  
 Or download it directly from GitHub:
-[https://github.com/amrrnagy/Quoridor_AI](https://github.com/amrrnagy/Quoridor_AI)
+[https://github.com/amrrnagy/Quoridor](https://github.com/amrrnagy/Quoridor_AI)
  
 ---
  ## 🚀 How to Play / Run the Game
@@ -92,18 +92,18 @@ You can run Quoridor AI either by downloading the standalone executable (no inst
 ### Option 1: Play Immediately 
 If you just want to play the game without installing Python or any dependencies:
 1. Go to the **[Releases](../../releases)** section on the right side of this GitHub repository.
-2. Download the latest `Quoridor_AI.exe` file.
+2. Download the latest `Quoridor.exe` file.
 3. Double-click the downloaded file to play immediately!
 
 ---
 
-### Option 2: Run from Source (For Developers)
+### Option 2: Run from Source
 If you want to view, edit, or run the raw Python code, ensure you have Python (version 3.x recommended) installed on your system.
 
 1. **Clone and navigate to the project directory:**
    ```bash
-   git clone [https://github.com/amrrnagy/Quoridor_AI.git]
-   cd Quoridor_AI
+   git clone [https://github.com/amrrnagy/Quoridor.git]
+   cd Quoridor
    ```
 
 2. **Set up a virtual environment (Recommended):**
@@ -130,9 +130,12 @@ If you want to view, edit, or run the raw Python code, ensure you have Python (v
 ---
  
 ## 🎬 Demo Video
- 
+<div>
+  <a href="https://youtu.be/WKwINbpfrHU" target="_blank">
+    <img src="https://img.youtube.com/vi/WKwINbpfrHU/hqdefault.jpg" alt="Watch the Quoridor AI Demo Video" width="720" style="border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);" />
+  </a>
+</div>
 
- 
 ---
  
 ## 🤖 AI Usage Declaration
