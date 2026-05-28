@@ -132,7 +132,7 @@ If you want to view, edit, or run the raw Python code, ensure you have Python (v
 ## 🎬 Demo Video
 <div>
   <a href="https://youtu.be/WKwINbpfrHU" target="_blank">
-    <img src="https://img.youtube.com/vi/WKwINbpfrHU/hqdefault.jpg" alt="Watch the Quoridor AI Demo Video" width="720" style="border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);" />
+    <img src="https://img.youtube.com/vi/WKwINbpfrHU/maxresdefault.jpg" alt="Watch the Quoridor AI Demo Video" width="720" style="border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);" />
   </a>
 </div>
 
