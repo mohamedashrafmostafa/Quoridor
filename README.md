@@ -137,6 +137,30 @@ If you want to view, edit, or run the raw Python code, ensure you have Python (v
 </div>
 
 ---
+## 🖼️ User Interface & Gameplay
+
+Here is a look at the Quoridor AI interface and gameplay flow:
+
+### 1. Main Menu
+Choose your game mode (Human vs. Human or Human vs. Computer) and select your AI difficulty level.
+
+<img width="1002" height="714" alt="Screenshot 2026-05-28 211919" src="https://github.com/user-attachments/assets/e7fb973d-b834-4db7-a7c7-140571beb26e" />
+
+---
+
+### 2. Gameplay
+The 9×9 grid features valid move highlighting, pawn tracking, and real-time wall placement validation.
+
+<img width="999" height="714" alt="Screenshot 2026-05-28 211944" src="https://github.com/user-attachments/assets/54f5aa62-df79-4782-87f9-6bb308c51265" />
+
+---
+
+### 3. Game Over
+The system instantly detects when a pawn reaches the opposing baseline, halts inputs, and declares the winner.
+
+<img width="371" height="340" alt="Screenshot 2026-05-28 212008" src="https://github.com/user-attachments/assets/045780db-7ebb-454f-a5bc-52da91670816" />
+---
+
 
  
 *Computer and Systems Engineering Department — Ain Shams University — Spring 2026*
