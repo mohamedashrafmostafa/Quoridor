@@ -15,7 +15,7 @@
 | 2 |Mohamed Ashraf Mohamed |2300475|
 | 3 |Omar Ahmed Morshed|2300131|
 | 4 |Ali Ahmed Ayman |2300346|
-| 5 |Mohamed Ehab Abdelbary|2300570|
+| 5 |Mohamed EHab Abdelbary|2300570|
  
 ---
  
@@ -97,7 +97,7 @@ If you just want to play the game without installing Python or any dependencies:
 
 ---
 
-### Option 2: Run from Source 
+### Option 2: Run from Source (For Developers)
 If you want to view, edit, or run the raw Python code, ensure you have Python (version 3.x recommended) installed on your system.
 
 1. **Clone and navigate to the project directory:**
